@@ -1,0 +1,80 @@
+# What is the script? 
+This script scrapes the data from community pages of the provided input and its length by the user.
+
+# What data it scrapes ? 
+Title
+Author
+UpVotes
+Number of Comments
+Post URl
+Post Time
+
+
+Does it adds the data to the same excel file?
+
+Yes. 
+
+# How does this script work? 
+
+The script asks for the community name and it's lenght to scrape the data. 
+ex python , 60
+
+Once the script gets the input it uses selenium web driver and visits the provided keyword
+url. 
+Once the page loads, It scrolls and fetches the url link through xpath and appends it in a list.
+
+Once the length of url matches the provided input length, The chrome driver closes and 
+all the urls present in the list is handled by request and BeautifulSoup library. 
+
+The script sends requests to each url one by one and the bs4 library parses it and extracts
+the text data. 
+
+Once the data is collected for single url it will save it in excel file. 
+
+
+# Why to use scrolling whereas you can directly use xpath index to fetch urls? 
+
+The website of reddit is designed in such a way that as user scrolls down or up,  all the loaded posts disappear for user. 
+
+So index logic of xpath doesn't work here. 
+
+
+# Alternate way of scraping the same data?
+Yes, 
+Suppose you are scraping - https://www.reddit.com/r/Python/
+Now visit the developer tools F12 and go to network tab. 
+Select filter to Fetch/XHR 
+
+Now when you scroll down the page you'll find a url like 
+https://www.reddit.com/svc/shreddit/community-more-posts/best/?after=dDNfMW02dnFlbA%3D%3D&t=DAY&name=Python&adDistance=2&ad_posts_served=1&navigationSessionId=bfad19d2-4194-4085-82be-c0a3bdb95c61&feedLength=4
+
+you can also apply filter - type best/?after inside filter box
+
+So when you open the url in new tab, you'll find the data that you want to scrape, 
+and the benefit here is if you scroll to 100th comment here and create a xpath 
+to find 25 one, you'll get the data of 25 as in this url the comments doesn't disappear.
+
+Just a single catch, 
+It doesn't provide first 3 comments of the community page (https://www.reddit.com/r/Python/)that you visited,
+In best/?after url it provides comments url from index 4. 
+
+Sample of 2nd method, 
+This is xpath that fetches username index at 20
+(//*[@slot= 'full-post-link'] /..//*[@class = 'whitespace-nowrap'])[20]
+
+Now even if you scroll till end of the page and type this xpath inside Developer tools 
+of the best/?after url then you'll get the username placed at 20 th index, 
+You can try counting manually. 
+
+And lastly, 
+
+This script is just made for educational purpose, 
+The script doesn't promote any type of unethical practises
+
+
+
+
+
+
+
+ 
