@@ -16,7 +16,19 @@ from random import randint
 from time import sleep
 from openpyxl import Workbook, load_workbook
 import os
+import platform
+import getpass
 import logging
+
+
+def generate_user_name():
+
+    # This function will get the current user name of the system.
+    # This will help to load local chrome profile rather than selenium profile
+    username = getpass.getuser()
+    computer_name = platform.node()
+    full_system_id = f"{username}.{computer_name}"
+    return full_system_id
 
 
 def create_workbook():
@@ -51,11 +63,9 @@ add_data, save_data, file_name = create_workbook()
 def chromedriver_options_headers():
     # Providing a list of user agent
     list_of_user_agents = [
-        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.166 Safari/537.36",
-        "Mozilla/5.0 (Windows 7 Enterprise; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6099.71 Safari/537.36",
-        "Mozilla/5.0 (Windows Server 2012 R2 Standard; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5975.80 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64; CentOS Ubuntu 19.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5957.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5756.197 Safari/537.36"]
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"]
 
     # Generating random request
     random_user_agent = random.choice(list_of_user_agents)
@@ -64,35 +74,45 @@ def chromedriver_options_headers():
 
     options = Options()
     options.add_argument('--disable-gpu')
-    options.add_argument('--disable-gpu')
     options.add_argument(f"user-agent={random_user_agent}")
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_argument("--proxy-server='direct://'")
     options.add_argument("--proxy-bypass-list=*")
     options.add_argument('--ignore-certificate-errors')
     options.add_argument("--password-store=basic")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--enable-automation")
     options.add_argument("--disable-browser-side-navigation")
     options.add_argument("--disable-web-security")
     options.add_argument("--disable-infobars")
     options.add_argument("--disable-setuid-sandbox")
     options.add_argument("--disable-software-rasterizer")
-    options.add_argument('--incognito')
+    #options.add_argument('--incognito')
     options.add_argument("--start-maximized")
+    profile_path = f"C:\\Users\\{u_name}\\AppData\\Temp_"
+    options.add_argument(f"--user-data-dir={profile_path}")
+    options.add_argument("--profile-directory=Profile 2")
 
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')  # Prevents memory-related hangs
+    options.add_experimental_option("detach", True)
+
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
     # Loading Chromedriver with options,
-    web_driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options, )
+    web_driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    web_driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
     return web_driver
 
-
 def scraping_post_url():
-    append_url = []
+    get_unique_urls = []
+    seen = set()
 
     # visit Webpage
     try:
         #driver.get('https://www.reddit.com/user/leo___gangdu93/submitted/')
-        driver.get('https://www.reddit.com/r/Python/')
+        driver.get("https://www.reddit.com")
+        time.sleep(5)
+        driver.get(enter_url)
 
         # This try except is written for handling pages less than given length,
         # https://www.reddit.com/user/leo___gangdu93/submitted/ has less page and no scrolling components,
@@ -128,28 +148,33 @@ def scraping_post_url():
                 time.sleep(3)
 
                 for getting_url in find_length:
+                    if len(get_unique_urls) >= count_of_post_to_scrape:
+                        break
                     url = getting_url.get_attribute('href')
-                    if url in append_url:
-                        pass
-                    else:
-                        append_url.append(url)
-                        # print(url)
+                    if url and url not in seen:
+                        get_unique_urls.append(url)
+                        seen.add(url)
+                print(len(get_unique_urls))
+
+                if len(get_unique_urls) >= count_of_post_to_scrape:
+                    break
 
                 # Here when the scrolling is done, The lenght of urls is not fixed, sometime it scrapes 28 urls and on another it scrapes 36 urls,
                 # So for scraping 100 unique urls, the script scrolls almost 4 times,
                 # to get 100 urls only we use list slicing below.
 
-                if len(append_url) >= count_of_post_to_scrape:
-                    del append_url[count_of_post_to_scrape:]
-                    break
+                #
+                # if len(get_unique_urls) >= count_of_post_to_scrape:
+                #     del get_unique_urls[count_of_post_to_scrape:]
+                #     break
 
                 # This if condition is given to handle if the posts available are less than provide value.
 
-                if len(append_url) <= count_of_post_to_scrape:
+                if len(get_unique_urls) < count_of_post_to_scrape:
                     try:
                         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                         WebDriverWait(driver, 15).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "[style = 'will-change: unset;']")))
+                            EC.presence_of_element_located((By.XPATH, "//*[@class = 'w-full m-0']//*[@slot = 'full-post-link']")))
                         time.sleep(3)
                     except TimeoutException as time_out:
                         logging.error("No element found", time_out)
@@ -170,19 +195,16 @@ def scraping_post_url():
         logging.error("Scraping_post_function error", loading_website)
 
     # All the exceptions are logged in Reddit_scraper_.log
-    print(len(append_url))
-    return append_url
+    return get_unique_urls
 
 
 def sending_request():
     #List of user agents used to make a request randomly to the url
 
     list_of_user_agents = [
-        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.166 Safari/537.36",
-        "Mozilla/5.0 (Windows 7 Enterprise; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6099.71 Safari/537.36",
-        "Mozilla/5.0 (Windows Server 2012 R2 Standard; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5975.80 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64; CentOS Ubuntu 19.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5957.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5756.197 Safari/537.36"]
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"]
 
     User_Agent_headers = {
         "User-Agent": random.choice(list_of_user_agents),
@@ -258,8 +280,10 @@ if __name__ == '__main__':
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
     add_data, save_data, file_name = create_workbook()
+    u_name = generate_user_name()
     try:
         driver = chromedriver_options_headers()
+        enter_url = input("Please enter the category url that you want to scrape data from ")
         count_of_post_to_scrape = int(input("Please enter how many post's data you want to scrape "))
         list_of_urls = scraping_post_url()
         close_driver()
